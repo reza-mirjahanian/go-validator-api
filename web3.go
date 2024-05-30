@@ -19,9 +19,9 @@ type beaconBlockDetailResponse struct {
 	Data struct {
 		Message struct {
 			Body struct {
-				ExecutionPayload struct {
+				Eth1data struct {
 					BlockHash string `json:"block_hash"`
-				} `json:"execution_payload"`
+				} `json:"eth1_data"`
 			} `json:"body"`
 		} `json:"message"`
 	} `json:"data"`
@@ -116,6 +116,9 @@ func (w *Web3) getEndpointData(endpoint string, operation string, result interfa
 		log.Printf("Failed to create request for: %s with error: %s", endpoint, reqErr.Error())
 		return reqErr
 	}
+
+	log.Println("Requesting GET data from: ", endpoint)
+
 	httpRequest.Header.Set("Accept", "application/json")
 
 	// Send the request
@@ -154,9 +157,10 @@ func (w *Web3) getEndpointData(endpoint string, operation string, result interfa
 	return nil
 }
 
-// fetchBlockHash retrieves the block hash for a given slot ID from the Beacon chain.
+// fetchBlockHash retrieves the block hash for a given slot from the Beacon chain.
 func (w *Web3) fetchBlockHash(slot string) (common.Hash, error) {
 	// Construct the API endpoint URL for the Beacon chain block detail.
+	// https://docs.blastapi.io/blast-documentation/apis-documentation/core-api/ethereum/holesky-beacon/beacon/eth-v2-beacon-blocks-block_id
 	endpoint := w.endpoint.String() + "/eth/v2/beacon/blocks/" + slot
 
 	// Define a variable to store the Beacon chain block detail response.
@@ -170,63 +174,10 @@ func (w *Web3) fetchBlockHash(slot string) (common.Hash, error) {
 	}
 
 	// Extract the block hash from the Beacon chain block detail response.
-	hash := blockInfo.Data.Message.Body.ExecutionPayload.BlockHash
+	hash := blockInfo.Data.Message.Body.Eth1data.BlockHash
 
 	// Convert the block hash from a hexadecimal string to a byte slice.
 	return common.HexToHash(hash), nil
-}
-
-// fetchSyncCommitteesValidatorIndexes retrieves the validator indexes for the sync committees of a given slot ID.
-func (w *Web3) fetchSyncCommitteesValidatorIndexes(slot string) ([]string, error) {
-	// Construct the API endpoint URL for the sync committees of the given slot ID.
-	endpoint := w.endpoint.String() + "/eth/v1/beacon/states/" + slot + "/sync_committees"
-
-	// Define a variable to store the sync committees response.
-	var response syncCommitteesResponse
-
-	// Fetch the sync committees data from the API endpoint.
-	err := w.getEndpointData(endpoint, "sync committees", &response)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract the validator indexes from the sync committees response.
-	validatorIndexes := response.Data.Validators
-
-	// Return the validator indexes.
-	return validatorIndexes, nil
-}
-
-// RetrievePubKeysOfSyncCommittees retrievves the public keys of the validators in the sync committees for a given slot.
-func (w *Web3) getPubKeysOfSyncCommittees(slot string, validatorIndices []string) ([]string, error) {
-	// Build the API endpoint URL with validator indices as query parameters.
-	endpoint := w.endpoint.String() + "/eth/v1/beacon/states/" + slot + "/validators"
-	for index, validatorIndex := range validatorIndices {
-		if index == 0 {
-			endpoint += "?"
-		}
-		endpoint += "id=" + validatorIndex
-		if index != len(validatorIndices)-1 {
-			endpoint += "&"
-		}
-	}
-
-	// Define the detailResponse struct for the API request.
-	var detailResponse validatorsDetailResponse
-
-	// Fetch the data from the API endpoint and store it in the detailResponse struct.
-	err := w.getEndpointData(endpoint, "receive pubkeys of validators", &detailResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract the public keys from the detailResponse struct and store them in a slice.
-	var pubKeys []string
-	for _, info := range detailResponse.Data {
-		pubKeys = append(pubKeys, info.Validator.Pubkey)
-	}
-
-	return pubKeys, nil
 }
 
 // Fetch the current slot  from the beacon chain.
@@ -324,4 +275,59 @@ func (w *Web3) GetSyncCommitteeDuties(slotStr string) ([]string, error) {
 	}
 
 	return syncCommitteeKeys, nil
+}
+
+// fetchSyncCommitteesValidatorIndexes retrieves the validator indexes for the sync committees of a given slot .
+func (w *Web3) fetchSyncCommitteesValidatorIndexes(slot string) ([]string, error) {
+	// Construct the API endpoint URL for the sync committees of the given slot.
+	//https://docs.blastapi.io/blast-documentation/apis-documentation/core-api/ethereum/holesky-beacon/beacon/eth-v1-beacon-states-state_id-sync_committees
+	endpoint := w.endpoint.String() + "/eth/v1/beacon/states/" + slot + "/sync_committees"
+
+	// Define a variable to store the sync committees response.
+	var response syncCommitteesResponse
+
+	// Fetch the sync committees data from the API endpoint.
+	err := w.getEndpointData(endpoint, "sync committees", &response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract the validator indexes from the sync committees response.
+	validatorIndexes := response.Data.Validators
+
+	// Return the validator indexes.
+	return validatorIndexes, nil
+}
+
+// RetrievePubKeysOfSyncCommittees retrievves the public keys of the validators in the sync committees for a given slot.
+func (w *Web3) getPubKeysOfSyncCommittees(slot string, validatorIndices []string) ([]string, error) {
+	// Build the API endpoint URL with validator indices as query parameters.
+	// https://docs.blastapi.io/blast-documentation/apis-documentation/core-api/ethereum/holesky-beacon/beacon/eth-v1-beacon-states-state_id-validators
+	endpoint := w.endpoint.String() + "/eth/v1/beacon/states/" + slot + "/validators"
+	for index, validatorIndex := range validatorIndices {
+		if index == 0 {
+			endpoint += "?"
+		}
+		endpoint += "id=" + validatorIndex
+		if index != len(validatorIndices)-1 {
+			endpoint += "&"
+		}
+	}
+
+	// Define the detailResponse struct for the API request.
+	var detailResponse validatorsDetailResponse
+
+	// Fetch the data from the API endpoint and store it in the detailResponse struct.
+	err := w.getEndpointData(endpoint, "receive pubkeys of validators", &detailResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract the public keys from the detailResponse struct and store them in a slice.
+	var pubKeys []string
+	for _, info := range detailResponse.Data {
+		pubKeys = append(pubKeys, info.Validator.Pubkey)
+	}
+
+	return pubKeys, nil
 }
