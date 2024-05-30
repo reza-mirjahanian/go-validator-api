@@ -1,14 +1,20 @@
 
 ## Description
 
-RESTful Ethereum Validator API
+REST Ethereum Validator API
 
 ![alt text](docs/blockreward.png)
 ![alt text](docs/syncduties.png)
+![alt text](docs/env.png)
+![alt text](docs/compose.png)
+
+--------------------------
+--------------------------
 
 ## Running the app with Docker
-
-@todo
+```bash
+docker compose -f docker-compose.dev.yml  up
+```
 
 
 
@@ -43,7 +49,7 @@ go run .
 
 
 #### Todo:
-- 💡 Better naming conventions
+- 💡 Better naming conventions and folder structure
 - 💡 Caching with Redis
 - 💡 Include API versioning,
 
