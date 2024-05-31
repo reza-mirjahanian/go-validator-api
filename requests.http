@@ -1,0 +1,27 @@
+# https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+
+
+############ 1) Retrieves information about the block reward for a given slot.
+GET http://localhost:8080/blockreward/87654321 
+
+
+### if the slot does not exist / was missed.
+GET http://localhost:8080/blockreward/2 
+
+
+### if the requested slot is in the future.
+GET http://localhost:8080/blockreward/99994321 
+
+
+
+
+############ 2) Retrieves a list of validators that have sync committee duties for a given slot.
+GET http://localhost:8080/syncduties/87654321 
+
+
+### if the slot does not exist / was missed.
+GET http://localhost:8080/syncduties/2 
+
+
+### if the requested slot is in the future.
+GET http://localhost:8080/syncduties/99994321 

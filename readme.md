@@ -57,9 +57,11 @@ docker compose -f docker-compose.dev.yml  up
 go run .
 ```
 
+## Example requests:
+check requests.http file
+https://marketplace.visualstudio.com/items?itemName=humao.rest-client
 
-
-#### Test
+## Unit Tests
 
 ```bash
 @todo
