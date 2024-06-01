@@ -56,6 +56,7 @@ type rateLimitTransport struct {
 	transport   http.RoundTripper
 }
 
+// RoundTrip is an implementation of the RoundTripper interface that enforces the rate limit.
 func (r *rateLimitTransport) RoundTrip(request *http.Request) (*http.Response, error) {
 	ctx := context.Background()
 	if waitErr := r.rateLimiter.Wait(ctx); waitErr != nil {
@@ -181,7 +182,7 @@ func (w *Web3) fetchBlockHash(slot string) (common.Hash, error) {
 }
 
 // Fetch the current slot  from the beacon chain.
-func (w *Web3) getCurrentSlot() *big.Int {
+func (w *Web3) getCurrentHeadSlot() *big.Int {
 	// Build the API endpoint URL for the beacon chain headers.
 	endpoint := w.endpoint.String() + "/eth/v1/beacon/headers"
 
@@ -205,19 +206,9 @@ func (w *Web3) getCurrentSlot() *big.Int {
 }
 
 func (w *Web3) GetBlockRewardAndStatusBySlot(ctx context.Context, slotStr string) (*string, *string, error) {
-	slotInt, valid := new(big.Int).SetString(slotStr, 10)
-	if !valid {
-		return nil, nil, errors.New("cannot convert slot to big.Int")
-	}
-
-	// Check if the slot is before the Paris merge slot
-	if slotInt.Cmp(big.NewInt(4700012)) != 1 {
-		return nil, nil, &SlotUnavailableError{Message: "Slot is missing"}
-	}
-
-	currentSlot := w.getCurrentSlot()
-	if slotInt.Cmp(currentSlot) == 1 {
-		return nil, nil, &SlotTooFarInFutureError{Message: "Slot is in the future"}
+	err := w.validateSlot(slotStr)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	blockHash, hashErr := w.fetchBlockHash(slotStr)
@@ -261,7 +252,30 @@ func (w *Web3) GetBlockRewardAndStatusBySlot(ctx context.Context, slotStr string
 	return &rewardStr, &status, nil
 }
 
+func (w *Web3) validateSlot(slotStr string) error {
+	slotInt, valid := new(big.Int).SetString(slotStr, 10)
+	if !valid {
+		return errors.New("cannot convert slot to big.Int")
+	}
+
+	// Check if the slot is before the Paris merge slot
+	if slotInt.Cmp(big.NewInt(4700012)) != 1 {
+		return &SlotUnavailableError{Message: "Slot is missing"}
+	}
+
+	currentSlot := w.getCurrentHeadSlot()
+	if slotInt.Cmp(currentSlot) == 1 {
+		return &SlotTooFarInFutureError{Message: "Slot is in the future"}
+	}
+	return nil
+}
+
 func (w *Web3) GetSyncCommitteeDuties(slotStr string) ([]string, error) {
+	err := w.validateSlot(slotStr)
+	if err != nil {
+		return nil, err
+	}
+
 	// Fetch validator indexes for the given slot
 	validators, fetchErr := w.fetchSyncCommitteesValidatorIndexes(slotStr)
 	if fetchErr != nil {

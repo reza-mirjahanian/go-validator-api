@@ -20,16 +20,40 @@ More info:
 
 
 ## For "/blockreward/:slot" :
-  - We need the block hash.
-  - BlockByHash returns the given full block
+1. Checks if the slot is before the Paris merge slot. If yes, returns
+   an error.
 
-```
+2. Compares the slot with the current slot to ensure it's not in the
+   future.
+
+3. Fetch Block Hash
+
+4. Fetch Block by Hash( BlockByHash function)
+
+5. Calculate Fees
+
+6. Process Transactions:
+   -   Iterates over each transaction in the block.
+   -   Fetches transaction receipts.
+   -   Calculates the cost and checks if the transaction is a MEV transaction by comparing gas price with three times the base fee.
+
+7. Calculate Reward
+
+```bash
+### fetch current head slot blocks
 https://RPC_ENDPOINT/eth/v1/beacon/headers
+
+
 https://RPC_ENDPOINT/eth/v2/beacon/blocks/8765432
 ```
 
 
 More info:
+
+
+https://docs.blastapi.io/blast-documentation/apis-documentation/core-api/ethereum/holesky-beacon/beacon/eth-v1-beacon-headers
+
+
 [https://docs.blastapi.io/blast-documentation/apis-documentation/core-api/ethereum/holesky-beacon/beacon/eth-v2-beacon-blocks-block_id](https://docs.blastapi.io/blast-documentation/apis-documentation/core-api/ethereum/holesky-beacon/beacon/eth-v2-beacon-blocks-block_id)
 
 ---------------
@@ -67,13 +91,17 @@ https://marketplace.visualstudio.com/items?itemName=humao.rest-client
 @todo
 ```
 
+#### Swagger UI
+```bash
+@todo
+```
+
 ## Info:
 - 📌 gin
 - 📌 go-ethereum
 - 📌 spf13/viper
 
-#### Swagger UI (for Docker, port is 3008)
-@toto
+
 
 #### Done:
 - ✅ GET /blockreward/{slot}
